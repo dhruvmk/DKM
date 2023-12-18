@@ -134,12 +134,12 @@ class MegadepthScene:
 
 
 class MegadepthBuilder:
-    def __init__(self, data_root="data/megadepth") -> None:
+    def __init__(self, data_root="data") -> None:
         self.data_root = data_root
         self.scene_info_root = os.path.join(data_root, "prep_scene_info")
         self.all_scenes = os.listdir(self.scene_info_root)
-        self.test_scenes = ["0017.npy", "0004.npy", "0048.npy", "0013.npy"]
-        self.test_scenes_loftr = ["0015.npy", "0022.npy"]
+        self.test_scenes = []
+        self.test_scenes_loftr = []
 
     def build_scenes(self, split="train", min_overlap=0.0, **kwargs):
         if split == "train":

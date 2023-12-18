@@ -163,6 +163,8 @@ def get_model(pretrained_backbone=True, resolution = "low", **kwargs):
         h, w = 600, 800
     elif resolution == "highester":
         h, w = 660, 880
+
+    h, w = 1080, 1080
         
     encoder = ResNet50(pretrained=pretrained_backbone, high_res = False, freeze_bn=False)
     matcher = RegressionMatcher(encoder, decoder, h=h, w=w, alpha=1, beta=0,**kwargs).cuda()
@@ -174,7 +176,7 @@ def train(args):
     wandb_mode = "online" if wandb_log else "disabled"
     wandb.init(project="dkm", entity=wandb_entity, name=experiment_name, reinit=False, mode = wandb_mode)
     checkpoint_dir = "workspace/checkpoints/"
-    h, w = 540, 720
+    h, w = 1080, 1080
     model = get_model(pretrained_backbone=True, resolution="higher")
     wandb.watch(model)
     # Num steps
@@ -185,7 +187,7 @@ def train(args):
     k = 150000 // batch_size
 
     # Data
-    mega = MegadepthBuilder(data_root="data/megadepth", loftr_ignore=True, imc21_ignore = True)
+    mega = MegadepthBuilder(data_root="data", loftr_ignore=True, imc21_ignore = True)
     megadepth_train1 = mega.build_scenes(
         split="train_loftr", min_overlap=0.01, ht=h, wt=w, shake_t=32
     )
@@ -205,7 +207,7 @@ def train(args):
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=[(2*N) // 3, (9 * N) // 10], gamma=0.2
     )
-    megadense_benchmark = MegadepthDenseBenchmark("data/megadepth", h=h, w=w, num_samples=4000)
+    megadense_benchmark = MegadepthDenseBenchmark("data", h=h, w=w, num_samples=4000)
     checkpointer = CheckPoint(checkpoint_dir, experiment_name)
     checkpoint_name = checkpoint_dir + experiment_name + "_latest.pth"
     states = {}
