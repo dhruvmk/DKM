@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 
 from torch import nn
 from torch.utils.data import ConcatDataset
+from torch.utils.tensorboard import SummaryWriter
 
 import json
 import wandb
@@ -164,8 +165,7 @@ def get_model(pretrained_backbone=True, resolution = "low", **kwargs):
     elif resolution == "highester":
         h, w = 660, 880
 
-    h, w = 1080, 1080
-        
+            
     encoder = ResNet50(pretrained=pretrained_backbone, high_res = False, freeze_bn=False)
     matcher = RegressionMatcher(encoder, decoder, h=h, w=w, alpha=1, beta=0,**kwargs).cuda()
     return matcher
@@ -176,18 +176,18 @@ def train(args):
     wandb_mode = "online" if wandb_log else "disabled"
     wandb.init(project="dkm", entity=wandb_entity, name=experiment_name, reinit=False, mode = wandb_mode)
     checkpoint_dir = "workspace/checkpoints/"
-    h, w = 1080, 1080
-    model = get_model(pretrained_backbone=True, resolution="higher")
+    h, w = 540, 720
+    model = get_model(pretrained_backbone=True, resolution="low")
     wandb.watch(model)
     # Num steps
     n0 = 0
-    batch_size = gpus * 8
-    N = (32 * 250000) // batch_size  # 250k steps of batch size 32
+    batch_size = gpus
+    N = (250000) // batch_size  # 250k steps of batch size 1
     # checkpoint every
-    k = 150000 // batch_size
+    k = 1500 // batch_size
 
     # Data
-    mega = MegadepthBuilder(data_root="data", loftr_ignore=True, imc21_ignore = True)
+    mega = MegadepthBuilder(data_root="data")
     megadepth_train1 = mega.build_scenes(
         split="train_loftr", min_overlap=0.01, ht=h, wt=w, shake_t=32
     )
@@ -225,6 +225,7 @@ def train(args):
     if states:
         print(f"Loaded states {list(states.keys())}, at step {n0}")
     dp_model = nn.DataParallel(model)
+    writer = SummaryWriter()
     for n in range(n0, N, k):
         mega_sampler = torch.utils.data.WeightedRandomSampler(
             mega_ws, num_samples=batch_size * k, replacement=False
@@ -234,16 +235,18 @@ def train(args):
                 megadepth_train,
                 batch_size=batch_size,
                 sampler=mega_sampler,
-                num_workers=gpus * 8,
+                num_workers=gpus,
             )
         )
-        train_k_steps(
+        tr_loss = train_k_steps(
             n, k, mega_dataloader, dp_model, depth_loss, optimizer, lr_scheduler
         )
+        print(tr_loss)
+        writer.add_scalar("Loss/train", tr_loss, n)
         checkpointer(model, optimizer, lr_scheduler, n)
-        wandb.log(megadense_benchmark.benchmark(model))
+        # wandb.log(megadense_benchmark.benchmark(model))
 
-
+    writer.close()
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--gpus", default=1, type=int)

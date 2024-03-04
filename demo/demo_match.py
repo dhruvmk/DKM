@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # Create model
     dkm_model = DKMv3_outdoor(device=device)
 
-    H, W = 864, 1152
+    H, W = 540, 720
 
     im1 = Image.open(im1_path).resize((W, H))
     im2 = Image.open(im2_path).resize((W, H))

@@ -14,19 +14,21 @@ def train_step(train_batch, model, objective, optimizer, **kwargs):
 def train_k_steps(
     n_0, k, dataloader, model, objective, optimizer, lr_scheduler, progress_bar=True
 ):
+    avg_loss = 0
     for n in tqdm(range(n_0, n_0 + k), disable=not progress_bar):
         batch = next(dataloader)
         model.train(True)
         batch = to_cuda(batch)
-        train_step(
+        avg_loss += train_step(
             train_batch=batch,
             model=model,
             objective=objective,
             optimizer=optimizer,
             lr_scheduler=lr_scheduler,
             n=n,
-        )
+        )["train_loss"]
         lr_scheduler.step()
+    return avg_loss / k
 
 
 def train_epoch(

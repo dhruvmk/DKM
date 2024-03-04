@@ -54,6 +54,7 @@ class MegadepthScene:
 
     def load_im(self, im_ref, crop=None):
         im = Image.open(im_ref)
+        im = im.convert("RGB")
         return im
 
     def load_depth(self, depth_ref, crop=None):
